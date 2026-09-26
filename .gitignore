@@ -1,0 +1,19 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+*.pch
+*.ncb
+*.idb
+*.res
+*.suo
+*.user
+*.cache
+*.manifest
+BuildLog.htm

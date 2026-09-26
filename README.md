@@ -6,10 +6,10 @@ Originally published at [Asynchronous delegates and callback](https://blogs.msdn
 
 ## Building
 
-```text
-csc del.cs
-del.exe
-```
+<!-- Console -->
+
+    csc del.cs
+    del.exe
 
 ## Note
 

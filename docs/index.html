@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>blog-async-delegate-callback</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="post">
+<header class="site">
+  <a class="brand" href="https://redtomram-gif.github.io/thottams-blog-archive/">Thottam R. Sriram</a>
+  <span class="tag">Code sample &middot; MSDN blog archive</span>
+</header>
+<main>
+<article>
+<h1>Asynchronous delegates and callback</h1>
+<p class="meta">
+  <code>blog-async-delegate-callback</code>
+  <a class="repo" href="https://redtomram-gif.github.io/thottams-blog-archive/posts/2009-04-11-asynchronous-delegates-and-callback.html">read the blog post &rarr;</a>
+</p>
+<p>Demonstrates <code>BeginInvoke</code>/<code>EndInvoke</code> on a delegate with a callback, and how to marshal an exception thrown on the worker thread back to the caller via a collected <code>List&lt;Exception&gt;</code> and a <code>ManualResetEvent</code>.</p>
+
+<h2>Source</h2>
+<figure class="code">
+<figcaption>del.cs <span class="lang">C#</span></figcaption>
+<pre><code class="hljs"><span class="hljs-keyword">using</span> System;
+<span class="hljs-keyword">using</span> System.Threading;
+<span class="hljs-keyword">using</span> System.Runtime.Remoting.Messaging;
+<span class="hljs-keyword">using</span> System.Collections.Generic;
+
+<span class="hljs-keyword">namespace</span> <span class="hljs-title">Delegate</span>
+{
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">SampleClass</span>
+    {
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-built_in">bool</span> <span class="hljs-title">SampleMethod</span>()</span>
+        {
+            Console.WriteLine(<span class="hljs-string">&quot;Inside sample method ...&quot;</span>);
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> ArgumentException();
+        }
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-built_in">delegate</span> <span class="hljs-built_in">bool</span> <span class="hljs-title">SampleMethodCaller</span>()</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">DelegateSample</span>
+    {
+        List&lt;Exception&gt; exceptions;
+        ManualResetEvent waiter;
+
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">DelegateSample</span>()</span>
+        {
+            exceptions = <span class="hljs-keyword">new</span> List&lt;Exception&gt;();
+        }
+
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">CallBackMethodForDelegate</span>(<span class="hljs-params">IAsyncResult result</span>)</span>
+        {
+            SampleMethodCaller smd = (SampleMethodCaller)((AsyncResult)result).AsyncDelegate;
+            <span class="hljs-keyword">try</span>
+            {
+                <span class="hljs-built_in">bool</span> returnValue = smd.EndInvoke(result);
+            }
+            <span class="hljs-keyword">catch</span> (ArgumentException e)
+            {
+                <span class="hljs-keyword">lock</span> (<span class="hljs-keyword">this</span>)
+                {
+                    exceptions.Add(e);
+                }
+            }
+            <span class="hljs-keyword">finally</span>
+            {
+                waiter.Set();
+            }
+        }
+
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">CallDelegateUsingCallBack</span>()</span>
+        {
+            <span class="hljs-keyword">try</span>
+            {
+                waiter = <span class="hljs-keyword">new</span> ManualResetEvent(<span class="hljs-literal">false</span>);
+                SampleMethodCaller smd = <span class="hljs-keyword">new</span> SampleMethodCaller(SampleClass.SampleMethod);
+                IAsyncResult result = smd.BeginInvoke(CallBackMethodForDelegate, <span class="hljs-literal">null</span>);
+                waiter.WaitOne();
+
+                <span class="hljs-keyword">if</span> (exceptions.Count != <span class="hljs-number">0</span>)
+                {
+                    <span class="hljs-keyword">throw</span> exceptions[<span class="hljs-number">0</span>];
+                }
+            }
+            <span class="hljs-keyword">catch</span> (ArgumentException)
+            {
+                Console.WriteLine(<span class="hljs-string">&quot;Catch exceptions here ...&quot;</span>);
+            }
+        }
+
+        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Main</span>()</span>
+        {
+            DelegateSample ds = <span class="hljs-keyword">new</span> DelegateSample();
+            ds.CallDelegateUsingCallBack();
+            Console.WriteLine(<span class="hljs-string">&quot; -----------------&quot;</span>);
+        }
+    }
+}</code></pre>
+</figure>
+</article>
+<p class="back"><a href="https://redtomram-gif.github.io/thottams-blog-archive/">&larr; All posts</a></p>
+</main>
+<footer class="site">
+  Part of the <a href="https://redtomram-gif.github.io/thottams-blog-archive/">MSDN blog archive</a>.
+  Source on <a href="https://github.com/redtomram-gif/blog-async-delegate-callback">GitHub</a>.
+</footer>
+</body>
+</html>
